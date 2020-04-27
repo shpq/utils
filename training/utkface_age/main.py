@@ -369,6 +369,11 @@ for epoch in range(num_epochs):
         )
 
         print(s)
+        train_mae = round(float(train_mae), 1)
+        test_mae = round(float(test_mae), 1)
+        name = f"utkface_{epoch + 1}_{MODEL_NAME}_{train_mae}_vs_{test_mae}.h5"
+        name = PATH + "/" + name
+        torch.save(model, name)
 
     all_pred = []
     all_probas = []
