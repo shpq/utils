@@ -38,7 +38,7 @@ def get_train_val_generators(FLAGS):
     train_size = TrainConfig.train_size
     datasets_path = Config.dataset_path
     train_csv = f"{datasets_path}{FLAGS.csv}_train.csv"
-    test_csv = f"{datasets_path}/{FLAGS.csv}_test.csv"
+    test_csv = f"{datasets_path}{FLAGS.csv}_test.csv"
     is_train_test_exists = os.path.isfile(train_csv)
     is_train_test_exists = is_train_test_exists and os.path.isfile(test_csv)
     if not FLAGS.cached or not is_train_test_exists:
