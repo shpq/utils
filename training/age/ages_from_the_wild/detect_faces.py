@@ -59,7 +59,7 @@ if __name__ == "__main__":
                     image[y1:y2, x1:x2], (128, 128)))
 
         return detections
-    if not args.force:
+    if not args.force and df_prev is not None:
         print(f"len of df : {len(df)}")
         df = df[~df.url.isin(df_prev.url)]
         print(f"len of df after cleaning: {len(df)}")
