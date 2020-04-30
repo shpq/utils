@@ -3,10 +3,6 @@ import os
 from sklearn.model_selection import train_test_split
 
 
-src_to_age = {f"https://www.instagram.com/explore/tags/{i}yearsold/": i for i in range(2, 90)}
-src_to_age["https://www.instagram.com/explore/tags/1yearold/"] = 1
-src_to_age["https://www.instagram.com/explore/tags/newborn/"] = 0
-
 main_directory = os.path.dirname(__file__)
 df = pd.read_pickle(
     main_directory + "ages_from_the_wild/wild_ages_with_path.pk")
