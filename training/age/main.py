@@ -9,6 +9,7 @@ import sys
 import numpy as np
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from torch.optim import lr_scheduler
 
 from torchvision import transforms
 from PIL import Image
@@ -22,9 +23,9 @@ import timm
 
 torch.backends.cudnn.deterministic = True
 main_directory = os.path.dirname(__file__)
-TRAIN_CSV_PATH = main_directory + "utkface_train.csv"
-TEST_CSV_PATH = main_directory + "utkface_test.csv"
-IMAGE_PATH = main_directory + "utkface/UTKFace_128x128"
+TRAIN_CSV_PATH = main_directory + "ages_from_the_wild_train.csv"
+TEST_CSV_PATH = main_directory + "ages_from_the_wild_test.csv"
+IMAGE_PATH = main_directory + "ages_from_the_wild/cropped_images"
 
 
 # Argparse helper
@@ -45,6 +46,10 @@ parser.add_argument("--batch_size", type=int, default=0)
 parser.add_argument("--lr", type=float, default=0)
 
 parser.add_argument("--pretrained", type=str, default="seresnext26t_32x4d")
+
+parser.add_argument("--epoch_reduce", type=int, default=120)
+
+parser.add_argument("--gamma", type=float, default=0.7)
 
 args = parser.parse_args()
 
@@ -100,12 +105,12 @@ learning_rate = args.lr
 num_epochs = 200
 
 # Architecture
-NUM_CLASSES = 91
 BATCH_SIZE = args.batch_size
 GRAYSCALE = False
 
 df = pd.read_csv(TRAIN_CSV_PATH, index_col=0)
 ages = df["age"].values
+NUM_CLASSES = len(np.unique(ages))
 del df
 ages = torch.tensor(ages, dtype=torch.float)
 
@@ -186,11 +191,11 @@ custom_transform = A.Compose(
         A.RandomContrast(p=0.05),
         A.RandomBrightness(p=0.05),
         A.HorizontalFlip(),
-        A.Transpose(),
+        # A.Transpose(),
         A.ShiftScaleRotate(
             shift_limit=0.08, scale_limit=0.08, rotate_limit=20, p=1
         ),
-        # A.Blur(blur_limit=2, p=0.05),
+        A.Blur(blur_limit=2, p=0.05),
         A.OpticalDistortion(p=0.05),
         A.GridDistortion(p=0.05),
         # A.ChannelShuffle(p=0.05),
@@ -198,8 +203,8 @@ custom_transform = A.Compose(
         # A.ElasticTransform(),
         A.ToGray(p=0.05),
         A.JpegCompression(p=0.05),
-        # A.MedianBlur(p=0.05),
-        # A.RGBShift(p=0.05),
+        A.MedianBlur(p=0.05),
+        A.RGBShift(p=0.05),
         A.GaussNoise(var_limit=(0, 50), p=0.05),
         A.Normalize(),
         ToTensor(),
@@ -258,14 +263,13 @@ class CustomModel(nn.Module):
             torch.zeros(self.num_classes - 1).float()
         )
 
-    def forward(self,x):
+    def forward(self, x):
         x = self.back(x)
         x = x.view(x.size(0), -1)
         logits = self.fc(x)
         logits = logits + self.linear_1_bias
         probas = torch.sigmoid(logits)
         return logits, probas
-
 
 
 ###########################################
@@ -291,6 +295,9 @@ model = CustomModel(MODEL_NAME, NUM_CLASSES)
 
 model.to(DEVICE)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+scheduler = lr_scheduler.StepLR(
+    optimizer, step_size=args.epoch_reduce, gamma=args.gamma
+)
 
 
 def compute_mae_and_mse(model, data_loader, device):
@@ -352,7 +359,10 @@ for epoch in range(num_epochs):
 
                     # UPDATE MODEL PARAMETERS
                     optimizer.step()
+
                 running_cost += cost.item() * features.size(0)
+        if phase == "train":
+            scheduler.step()
     with torch.set_grad_enabled(False):  # save memory during inference
 
         train_mae, train_mse = compute_mae_and_mse(
