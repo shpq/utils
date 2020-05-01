@@ -20,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--force",
         default=False,
-        help="Save downloaded images?",
+        help="Force rewrite?",
         action="store_true",
     )
     args = parser.parse_args()
@@ -59,13 +59,17 @@ if __name__ == "__main__":
                     image[y1:y2, x1:x2], (128, 128)))
 
         return detections
-    if not args.force:
+    if not args.force and df_prev is not None:
         print(f"len of df : {len(df)}")
         df = df[~df.url.isin(df_prev.url)]
         print(f"len of df after cleaning: {len(df)}")
 
     r = list(tqdm(map(get_results, df.iterrows()), total=len(df)))
     df["detections"] = r
-    df_prev = df_prev.append(df).reset_index(drop=True)
-    df.to_pickle("wild_ages_with_detections.pk")
-    df.to_csv("wild_ages_with_detections.csv")
+    if df_prev is not None:
+        df_prev = df_prev.append(df).reset_index(drop=True)
+        df_prev.to_pickle("wild_ages_with_detections.pk")
+        df_prev.to_csv("wild_ages_with_detections.csv")
+    else:
+        df.to_pickle("wild_ages_with_detections.pk")
+        df.to_csv("wild_ages_with_detections.csv")

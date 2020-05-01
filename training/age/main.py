@@ -191,14 +191,14 @@ custom_transform = A.Compose(
         A.RandomContrast(p=0.05),
         A.RandomBrightness(p=0.05),
         A.HorizontalFlip(),
-        # A.Transpose(),
+        A.Transpose(),
         A.ShiftScaleRotate(
-            shift_limit=0.08, scale_limit=0.08, rotate_limit=20, p=1
+            shift_limit=0.12, scale_limit=0.12, rotate_limit=30, p=1
         ),
         A.Blur(blur_limit=2, p=0.05),
         A.OpticalDistortion(p=0.05),
         A.GridDistortion(p=0.05),
-        # A.ChannelShuffle(p=0.05),
+        A.ChannelShuffle(p=0.05),
         # A.HueSaturationValue(p=0.05),
         # A.ElasticTransform(),
         A.ToGray(p=0.05),

@@ -23,10 +23,11 @@ if __name__ == "__main__":
     main_directory = os.path.dirname(__file__)
     csvs_dir = main_directory + "wild_ages_csvs"
     dfs_names = os.listdir(csvs_dir)
-    df_list = [pd.read_csv(csvs_dir + "/" + df_name) for df_name in dfs_names]
+    df_list = [pd.read_csv(csvs_dir + "/" + df_name) for df_name in dfs_names if '.csv' in df_name]
     df = pd.concat(df_list).reset_index(drop=True)
     df = df[["text", "url", "src", "age"]]
     number = args.number
+    print(f"new df len {len(df)}")
 
     try:
         df_prev = pd.read_pickle("wild_ages_with_path.pk")
