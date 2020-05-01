@@ -5,6 +5,7 @@ import os
 from multiprocessing import Pool
 from tqdm import tqdm
 import argparse
+import numpy as np
 
 
 if __name__ == "__main__":
@@ -30,12 +31,24 @@ if __name__ == "__main__":
 
     detector = face_detection.build_detector(
         "RetinaNetResNet50", confidence_threshold=.95, nms_iou_threshold=.3)
-
+    print(detector.device)
     df = pd.read_pickle("wild_ages_with_path.pk")
     try:
         df_prev = pd.read_pickle("wild_ages_with_detections.pk")
     except:
         df_prev = None
+
+    def get_image(path):
+
+        if path is None:
+            return None
+
+        name = path.split("/")[-1].split(".jpg")[0]
+        image = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
+        return cv2.resize(image, (640, 640))
+
+    def get_batched_result(batch_images):
+        return detector.batched_detect(batch_images)
 
     def get_results(value):
         index, row = value
