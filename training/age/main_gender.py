@@ -117,8 +117,7 @@ BATCH_SIZE = args.batch_size
 GRAYSCALE = False
 
 df = pd.read_csv(TRAIN_CSV_PATH, index_col=0)
-ages = df["age"].values
-NUM_CLASSES = len(np.unique(ages))
+ages = df["gender"].values
 del df
 ages = torch.tensor(ages, dtype=torch.float)
 
@@ -157,12 +156,6 @@ train_imp = torch.ones(NUM_CLASSES - 1, dtype=torch.float)
 imp = imp.to(DEVICE)
 train_imp = train_imp.to(DEVICE)
 
-###################
-# Dataset
-###################
-
-def clean_dataset(age, preds):
-    return (np.abs(age[~pd.isna(preds)] - preds) < args.clean_diff) | ((age > 14) & (np.abs(age[~pd.isna(preds)] - preds) < args.clean_diff * 1/15 * age))
 
 
 class UTKFaceDataset(Dataset):
@@ -171,13 +164,6 @@ class UTKFaceDataset(Dataset):
     def __init__(self, csv_path, img_dir, transform=None, clean=False):
 
         df = pd.read_csv(csv_path, index_col=0)
-        last_preds = [int(x.split("_")[-1])
-                      for x in df.columns if "age_pred_" in x]
-        last_preds = max(last_preds) if last_preds else None
-        print(f"len df before cleaning: {len(df)}")
-        if clean and last_preds is not None:
-            df = df[clean_dataset(df["age"], df[f"age_pred_{last_preds}"])]
-        print(f"len df after cleaning: {len(df)}")
         self.img_dir = img_dir
         self.csv_path = csv_path
         self.img_names = df["name"].values

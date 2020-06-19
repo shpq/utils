@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 import timm
 from torchsummary import summary
-from utils import create_folder
+from utils import create_folder, TrainConfig
 
 
 def train_torch(FLAGS, kwargs):
@@ -132,9 +132,17 @@ def train_torch(FLAGS, kwargs):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     depth_trainable = FLAGS.depth_trainable
-    model_ft = timm.create_model(
-        FLAGS.pretrained, pretrained=True, num_classes=2
-    )
+    if FLAGS.saved == '-':
+        model_ft = timm.create_model(
+            FLAGS.pretrained, pretrained=True, num_classes=2
+        )
+    else:
+        model_ft = timm.create_model(
+            FLAGS.pretrained, pretrained=False, num_classes=2
+        )
+        
+        model_ft = torch.load(TrainConfig.checkpoints_folder + FLAGS.csv + '/' + FLAGS.saved)
+        print(FLAGS.saved + ' loaded')
     model_ft = model_ft.to(device)
     params_to_update = model_ft.parameters()
     if depth_trainable > 0:
@@ -169,7 +177,7 @@ def train_torch(FLAGS, kwargs):
     )
 
     input_size = (3, FLAGS.img_size, FLAGS.img_size)
-    print(summary(model_ft, input_data=input_size))
+    print(summary(model_ft, input_size=input_size))
     print(f"weights : {weights}")
     model_ft = train(
         model_ft,

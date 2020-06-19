@@ -39,9 +39,9 @@ if __name__ == "__main__":
     detector = face_detection.build_detector(
         "RetinaNetResNet50", confidence_threshold=.95, nms_iou_threshold=.3)
     print(detector.device)
-    df = pd.read_pickle("wild_ages_with_path.pk")
+    df = pd.read_pickle("wild_gender_with_path.pk")
     try:
-        df_prev = pd.read_pickle("wild_ages_with_detections.pk")
+        df_prev = pd.read_pickle("wild_gender_with_detections.pk")
     except:
         df_prev = None
 
@@ -73,6 +73,7 @@ if __name__ == "__main__":
 
                 cv2.imwrite(new_path, cv2.cvtColor(cv2.resize(
                     image[y1:y2, x1:x2], (128, 128)), cv2.COLOR_BGR2RGB), )
+                
         return batch_
 
     def chunker(seq, size):
@@ -88,6 +89,7 @@ if __name__ == "__main__":
         name = path.split("/")[-1].split(".jpg")[0]
         image = cv2.imread(path)
         detections = detector.detect(image)
+        new_paths = []
         if args.save:
             for ind, result in enumerate(detections):
                 x1, y1, x2, y2 = result[0:4].astype(int)
@@ -99,8 +101,10 @@ if __name__ == "__main__":
 
                 cv2.imwrite(new_path, cv2.resize(
                     image[y1:y2, x1:x2], (128, 128)))
+                new_paths.append(new_path)
 
-        return detections
+        return detections, new_paths
+
     if not args.force and df_prev is not None:
         print(f"len of df : {len(df)}")
         df = df[~df.url.isin(df_prev.url)]
@@ -118,8 +122,8 @@ if __name__ == "__main__":
 
     if df_prev is not None:
         df_prev = df_prev.append(df).reset_index(drop=True)
-        df_prev.to_pickle("wild_ages_with_detections.pk")
-        df_prev.to_csv("wild_ages_with_detections.csv")
+        df_prev.to_pickle("wild_gender_with_detections.pk")
+        df_prev.to_csv("wild_gender_with_detections.csv")
     else:
-        df.to_pickle("wild_ages_with_detections.pk")
-        df.to_csv("wild_ages_with_detections.csv")
+        df.to_pickle("wild_gender_with_detections.pk")
+        df.to_csv("wild_gender_with_detections.csv")

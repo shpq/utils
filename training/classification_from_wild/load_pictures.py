@@ -5,6 +5,7 @@ import PIL
 from tqdm import tqdm
 import h5py
 from utils import *
+from multiprocessing import Pool
 
 
 def validate(array):
@@ -23,6 +24,9 @@ def change_dataset(FLAGS, to_del):
     cols = df.columns
     print(f"deleting {len(to_del)}")
     print(f"have {len(df)}")
+    df[[x for x in cols if "Unnamed" not in x and x]].to_csv(
+        Config.dataset_path + FLAGS.csv + "_backup.csv"
+    )
     df = df[~df["url"].isin(to_del)]
     print(f"result {len(df)}")
 
@@ -49,61 +53,44 @@ def picture_url_to_array(url, size):
     return transformed_pil_image
 
 
-def skip_loaded_urls(urls, storage_name, overwrite):
-    if overwrite:
-        return urls
-
-    already_loaded_urls = set(
-        Cipher.decode(x) for x in get_storage_keys(storage_name)
-    )
-    return list(set(urls).difference(already_loaded_urls))
 
 
-def extend_original_pics_storage(FLAGS, urls, overwrite=False):
-    urls = skip_loaded_urls(
-        urls, StorageName.storage_path + FLAGS.storage, overwrite
+def extend_original_pics_storage(FLAGS, dataset, overwrite=False):
+    urls_skipped = skip_loaded_urls(
+        dataset, StorageName.storage_path + FLAGS.storage, overwrite
     )
     if FLAGS.parallel_download:
-        return extend_original_pics_storage_parallel(FLAGS, urls, overwrite)
-    to_del = []
-    with h5py.File(StorageName.storage_path + FLAGS.storage, "a") as h5f:
-        for url in tqdm(urls):
-            array_image = picture_url_to_array(url, Config.size_images)
-            if array_image is None:
-                to_del.append(url)
-                continue
-            h5f.create_dataset(Cipher.encode(url), data=array_image)
-    change_dataset(FLAGS, to_del)
+        return extend_original_pics_storage_parallel(FLAGS, urls_skipped, dataset, overwrite)
+
+def skip_loaded_urls(dataset, storage_name, overwrite):
+    if overwrite:
+        return dataset.urls.unique()
+
+    already_loaded_names = list(set(
+         [x for x in get_storage_keys(storage_name) if '.jpg' in x]
+    ))
+    print(f"already_loaded_names len {len(already_loaded_names)}")
+    print(f'withput loaded names len {len(dataset[~dataset.name.isin(already_loaded_names)].url.values)}')
+    return dataset[~dataset.name.isin(already_loaded_names)].url.values
 
 
-def extend_original_pics_storage_parallel(FLAGS, urls, overwrite=False):
-    from threading import Thread
+def _load_and_save(v):
+    url = v['url']
+    name_jpg = v['name']
+    size_images=Config.size_images
+    name=StorageName.storage_path + StorageName.storage
 
-    def _load_and_save(url, size_images, h5f):
-        array_image = picture_url_to_array(url, size_images)
-        if array_image is None:
-            return url
-        h5f.create_dataset(Cipher.encode(url), data=array_image)
+    array_image = picture_url_to_array(url, size_images)
+    if array_image is None:
+        return url
+    array_image.save(StorageName.storage_path + StorageName.storage + '/' + name_jpg)
 
-    def load_parallel(func, arg_list):
-        to_del = []
-
-        class MyThread(Thread):
-            def __init__(self, arg, h5f):
-                Thread.__init__(self)
-                self.arg = arg
-                self.h5f = h5f
-
-            def run(self):
-                el = func(self.arg, Config.size_images, self.h5f)
-                if el:
-                    to_del.append(el)
-
-        with h5py.File(StorageName.storage_path + FLAGS.storage, "a") as h5f:
-            threads = [MyThread(arg, h5f) for arg in arg_list]
-            tqdm([thr.start() for thr in threads])
-            tqdm([thr.join() for thr in threads])
-            return to_del
-
-    to_del = load_parallel(_load_and_save, urls)
+def extend_original_pics_storage_parallel(FLAGS, urls, dataset, overwrite=False):
+    
+    dataset_to_download = dataset[dataset.url.isin(urls)]
+    urls_with_names = [{"url" : u, "name" : n} for u, n in zip(dataset.url.values, dataset.name.values,) if u in urls]
+    print(f"urls_with_names len {len(urls_with_names)}")
+    with Pool(100) as p:
+        to_del = list(tqdm(p.imap(_load_and_save, urls_with_names), total=len(urls_with_names)))
+    to_del = [x for x in to_del if x is not None]
     change_dataset(FLAGS, to_del)
