@@ -3,6 +3,7 @@ __pycache__
 *.hdf5
 *.h5
 *.tar.xz
+*.tar.gz
 *.log
 *.tensor
 *.jpg

@@ -62,7 +62,7 @@ class Cipher:
 
 def get_storage_keys(storage_name):
     if not os.path.exists(storage_name):
+        print('storage doesnt exist')
         return []
-
-    with h5py.File(storage_name, "r") as h5f:
-        return list(h5f.keys())
+    print(f'storage exists, len ({len(os.listdir(storage_name))})')
+    return os.listdir(storage_name)

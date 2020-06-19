@@ -9,7 +9,8 @@ def change_cf(FLAGS):
     TrainConfig.batch_size = FLAGS.batch_size
     Config.size_images = (FLAGS.img_size, FLAGS.img_size)
     TrainConfig.input_shape_raw = (FLAGS.img_size, FLAGS.img_size, 3)
-    FLAGS.storage = f"{FLAGS.storage}_{FLAGS.img_size}x{FLAGS.img_size}.hdf5"
+    StorageName.storage = f"{FLAGS.storage}_{FLAGS.img_size}x{FLAGS.img_size}"
+    FLAGS.storage = f"{FLAGS.storage}_{FLAGS.img_size}x{FLAGS.img_size}"
 
 
 def create_folders():
@@ -17,17 +18,19 @@ def create_folders():
         Config.dataset_path,
         TrainConfig.checkpoints_folder,
         StorageName.storage_path,
+        StorageName.storage_path + StorageName.storage + '/1'
     ]:
+        print(folder)
         create_folder(folder)
 
 
 def main(FLAGS):
     dataset = read_dataset(FLAGS.csv)
-    urls = np.unique(dataset.url.values)
     print("download new images")
+    dataset = dataset.drop_duplicates(subset=['url'])
     change_cf(FLAGS)
     create_folders()
-    extend_original_pics_storage(FLAGS, urls)
+    extend_original_pics_storage(FLAGS, dataset)
     train_model(FLAGS)
 
 
@@ -105,6 +108,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gamma", type=float, default=0.5, help="Step reducing?"
     )
+    
+    parser.add_argument(
+        "--saved", type=str, default="-", help="Saved model?"
+    )
+
 
     FLAGS = parser.parse_args()
     main(FLAGS)
