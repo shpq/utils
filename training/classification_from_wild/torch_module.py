@@ -2,6 +2,7 @@ import time
 from tqdm import tqdm
 import torch
 import copy
+import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -132,13 +133,14 @@ def train_torch(FLAGS, kwargs):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     depth_trainable = FLAGS.depth_trainable
+    num_classes = len(np.unique(kwargs['train'].label))
     if FLAGS.saved == '-':
         model_ft = timm.create_model(
-            FLAGS.pretrained, pretrained=True, num_classes=2
+            FLAGS.pretrained, pretrained=True, num_classes=num_classes
         )
     else:
         model_ft = timm.create_model(
-            FLAGS.pretrained, pretrained=False, num_classes=2
+            FLAGS.pretrained, pretrained=False, num_classes=num_classes
         )
         
         model_ft = torch.load(TrainConfig.checkpoints_folder + FLAGS.csv + '/' + FLAGS.saved)

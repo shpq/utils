@@ -18,8 +18,12 @@ class HDF5Dataset(data.Dataset):
     def __getitem__(self, index):
         # img = Image.open(os.path.join(self.img_dir, self.img_names[index]))
         image = cv2.imread(os.path.join(self.img_dir, self.img_names[index]))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
+        try:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            print(e)
+            print(self.img_names[index])
+            raise
         
         label = self.y[index]
         img = image
