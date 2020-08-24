@@ -109,11 +109,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gamma", type=float, default=0.5, help="Step reducing?"
     )
-    
+
     parser.add_argument(
         "--saved", type=str, default="-", help="Saved model?"
     )
 
+    parser.add_argument(
+        "--quantize",
+        default=False,
+        help="Quantize model?",
+        action="store_true",
+    )
 
     FLAGS = parser.parse_args()
     main(FLAGS)
