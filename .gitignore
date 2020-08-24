@@ -5,6 +5,7 @@ __pycache__
 *.tar.xz
 *.tar.gz
 *.log
+*.t7
 *.tensor
 *.jpg
 *.pk
