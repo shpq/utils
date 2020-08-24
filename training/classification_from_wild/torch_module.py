@@ -10,7 +10,7 @@ import timm
 # from torchsummary import summary
 from utils import create_folder, TrainConfig
 import os
-
+from custom_models.mobilenet_v2_quantization import MobileNetV2Q
 
 def train_torch(FLAGS, kwargs):
 
@@ -136,14 +136,20 @@ def train_torch(FLAGS, kwargs):
     depth_trainable = FLAGS.depth_trainable
     num_classes = len(np.unique(kwargs['train'].label))
     if FLAGS.saved == '-':
-        model_ft = timm.create_model(
-            FLAGS.pretrained, pretrained=True, num_classes=num_classes
-        )
+        if FLAGS.pretrained == "custom_mobilenetv2":
+            model_ft = MobileNetV2Q()
+            pretrained_model = torch.hub.load('pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True)
+            pretrained_model.classifier[1] = nn.Linear(pretrained_model.classifier[1].in_features, 2)
+            model_ft.load_state_dict(pretrained_model.state_dict())
+        else:
+            model_ft = timm.create_model(
+                FLAGS.pretrained, pretrained=True, num_classes=num_classes
+            )
     else:
         model_ft = timm.create_model(
             FLAGS.pretrained, pretrained=False, num_classes=num_classes
         )
-        
+
         model_ft = torch.load(TrainConfig.checkpoints_folder + FLAGS.csv + '/' + FLAGS.saved)
         print(FLAGS.saved + ' loaded')
     model_ft = model_ft.to(device)
