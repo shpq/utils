@@ -166,15 +166,7 @@ def train_torch(FLAGS, kwargs):
                 FLAGS.pretrained, pretrained=True, num_classes=num_classes
             )
     else:
-        model_ft = timm.create_model(
-            FLAGS.pretrained, pretrained=False, num_classes=num_classes
-        )
-
-        model_ft = torch.load(
-            TrainConfig.checkpoints_folder +
-            FLAGS.csv +
-            '/' +
-            FLAGS.saved)
+        model_ft = torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved))
         print(FLAGS.saved + ' loaded')
     model_ft = model_ft.to(device)
     params_to_update = model_ft.parameters()
@@ -213,9 +205,9 @@ def train_torch(FLAGS, kwargs):
     # print(summary(model_ft, input_size=input_size))
     print(f"weights : {weights}")
     if FLAGS.quantize:
-        model.fuse_model()
-        model.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
-        torch.quantization.prepare_qat(model, inplace=True)
+        model_ft.fuse_model()
+        model_ft.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+        torch.quantization.prepare_qat(model_ft, inplace=True)
     model_ft = train(
         model_ft,
         FLAGS.pretrained,
