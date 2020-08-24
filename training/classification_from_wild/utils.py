@@ -26,28 +26,27 @@ def load_parallel(func, arg_list):
 
 
 def create_folder(folder):
-    folders = folder.split("/")[:-1]
-    if not os.path.exists("/".join(folders)):
-        os.mkdir("/".join(folders))
+    if not os.path.exists(os.path.join('.', os.path.dirname(folder))):
+        os.mkdir(os.path.join('.', os.path.dirname(folder)))
 
 
 def read_dataset(filename):
-    path = Config.dataset_path + f"{filename}.csv"
+    path =  os.path.join(Config.dataset_path, f"{filename}.csv")
     dataset = pd.read_csv(path)
     return dataset
 
 
 class Config:
-    dataset_path = main_directory + "/csvs/"
+    dataset_path = os.path.join(main_directory, "csvs")
 
 
 class TrainConfig:
-    checkpoints_folder = main_directory + "/models_checkpoints/"
+    checkpoints_folder = os.path.join(main_directory, "models_checkpoints")
     train_size = 0.85
 
 
 class StorageName:
-    storage_path = main_directory + "/storages/"
+    storage_path = os.path.join(main_directory, "storages")
 
 
 class Cipher:

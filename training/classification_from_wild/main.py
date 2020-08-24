@@ -3,6 +3,7 @@ import numpy as np
 from train import train_model
 from load_pictures import extend_original_pics_storage
 from utils import read_dataset, TrainConfig, Config, StorageName, create_folder
+import os
 
 
 def change_cf(FLAGS):
@@ -18,17 +19,17 @@ def create_folders():
         Config.dataset_path,
         TrainConfig.checkpoints_folder,
         StorageName.storage_path,
-        StorageName.storage_path + StorageName.storage + '/1'
+        os.path.join(StorageName.storage_path, StorageName.storage, '')
     ]:
         print(folder)
         create_folder(folder)
 
 
 def main(FLAGS):
+    change_cf(FLAGS)
     dataset = read_dataset(FLAGS.csv)
     print("download new images")
     dataset = dataset.drop_duplicates(subset=['url'])
-    change_cf(FLAGS)
     create_folders()
     extend_original_pics_storage(FLAGS, dataset)
     train_model(FLAGS)
