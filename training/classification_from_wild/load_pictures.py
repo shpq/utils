@@ -25,13 +25,13 @@ def change_dataset(FLAGS, to_del):
     print(f"deleting {len(to_del)}")
     print(f"have {len(df)}")
     df[[x for x in cols if "Unnamed" not in x and x]].to_csv(
-        Config.dataset_path + FLAGS.csv + "_backup.csv"
+        os.path.join(Config.dataset_path, FLAGS.csv + "_backup.csv")
     )
     df = df[~df["url"].isin(to_del)]
     print(f"result {len(df)}")
 
     df[[x for x in cols if "Unnamed" not in x and x]].to_csv(
-        Config.dataset_path + FLAGS.csv + ".csv"
+        os.path.join(Config.dataset_path, FLAGS.csv + ".csv")
     )
 
 
@@ -48,8 +48,6 @@ def picture_url_to_array(url, size):
 
     transformed_pil_image = pil_image.resize(size, resample=PIL.Image.BICUBIC)
 
-    # image_type = 'story' if real_size[0] != real_size[1] else 'feed'
-
     return transformed_pil_image
 
 
@@ -57,7 +55,7 @@ def picture_url_to_array(url, size):
 
 def extend_original_pics_storage(FLAGS, dataset, overwrite=False):
     urls_skipped = skip_loaded_urls(
-        dataset, StorageName.storage_path + FLAGS.storage, overwrite
+        dataset, os.path.join(StorageName.storage_path, FLAGS.storage), overwrite
     )
     if FLAGS.parallel_download:
         return extend_original_pics_storage_parallel(FLAGS, urls_skipped, dataset, overwrite)
@@ -83,7 +81,7 @@ def _load_and_save(v):
     array_image = picture_url_to_array(url, size_images)
     if array_image is None:
         return url
-    array_image.save(StorageName.storage_path + StorageName.storage + '/' + name_jpg)
+    array_image.save(os.path.join(StorageName.storage_path, StorageName.storage, name_jpg))
 
 def extend_original_pics_storage_parallel(FLAGS, urls, dataset, overwrite=False):
     

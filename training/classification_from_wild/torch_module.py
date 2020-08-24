@@ -7,8 +7,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import timm
-from torchsummary import summary
+# from torchsummary import summary
 from utils import create_folder, TrainConfig
+import os
 
 
 def train_torch(FLAGS, kwargs):
@@ -100,8 +101,8 @@ def train_torch(FLAGS, kwargs):
 
                 # deep copy the model
                 if phase == "valid":
-                    name = "models_checkpoints/{}/{}__torch_{}__epoch_{}_val_acc_{:.3f}_vs_{:.3f}_val_loss_{:.2f}_vs_{:.3f}.h5".format(
-                        FLAGS.csv,
+                    name = os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv,
+                        "{}__torch_{}__epoch_{}_val_acc_{:.3f}_vs_{:.3f}_val_loss_{:.2f}_vs_{:.2f}.h5".format(
                         FLAGS.csv,
                         FLAGS.pretrained,
                         epoch,
@@ -109,7 +110,7 @@ def train_torch(FLAGS, kwargs):
                         train_acc,
                         epoch_loss,
                         train_loss,
-                    )
+                    ))
                     create_folder(name)
                     torch.save(model, name)
                     if epoch_acc > best_acc:
@@ -179,7 +180,7 @@ def train_torch(FLAGS, kwargs):
     )
 
     input_size = (3, FLAGS.img_size, FLAGS.img_size)
-    print(summary(model_ft, input_size=input_size))
+    # print(summary(model_ft, input_size=input_size))
     print(f"weights : {weights}")
     model_ft = train(
         model_ft,

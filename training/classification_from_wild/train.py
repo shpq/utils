@@ -15,7 +15,7 @@ def torch_generators(
     train, test, batch_size, FLAGS, class_weights, dataset_path
 ):
     kwargs = dict()
-    storage_path = StorageName.storage_path + FLAGS.storage
+    storage_path = os.path.join(StorageName.storage_path, FLAGS.storage)
     transformations_for_phase = get_augmentation()
     dataloaders = {
         x: DataLoader(
@@ -37,8 +37,8 @@ def get_train_val_generators(FLAGS):
     print(f"len dataset {len(dataset)}")
     train_size = TrainConfig.train_size
     datasets_path = Config.dataset_path
-    train_csv = f"{datasets_path}{FLAGS.csv}_train.csv"
-    test_csv = f"{datasets_path}{FLAGS.csv}_test.csv"
+    train_csv = os.path.join(datasets_path, f"{FLAGS.csv}_train.csv")
+    test_csv = os.path.join(datasets_path, f"{FLAGS.csv}_test.csv")
     is_train_test_exists = os.path.isfile(train_csv)
     is_train_test_exists = is_train_test_exists and os.path.isfile(test_csv)
     if not FLAGS.cached or not is_train_test_exists:
