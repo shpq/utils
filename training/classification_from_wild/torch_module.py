@@ -35,6 +35,7 @@ def train_torch(FLAGS, kwargs):
         best_acc = 0.0
 
         for epoch in range(num_epochs):
+            model = model.to(device)
             print("Epoch {}/{}".format(epoch, num_epochs - 1))
             print("-" * 10)
 
@@ -53,13 +54,14 @@ def train_torch(FLAGS, kwargs):
                     total=len(dataloaders[phase]),
                 )
                 if quantize and phase == "valid":
-                    if epoch > 3:
+                    if epoch > 0:
                         # Freeze quantizer parameters
                         model.apply(torch.quantization.disable_observer)
-                    if epoch > 2:
+                    if epoch > 0:
                         # Freeze batch norm mean and variance estimates
                         model.apply(torch.nn.intrinsic.qat.freeze_bn_stats)
-
+                if quantize and phase == "valid":
+                    model = model.to("cpu")
                 for index, chunk in pbar:
                     torch.cuda.empty_cache()
                     inputs, labels = chunk
@@ -85,7 +87,9 @@ def train_torch(FLAGS, kwargs):
                             quantized_model = torch.quantization.convert(
                                 model.eval(), inplace=False)
                             quantized_model.eval()
+                            inputs = inputs.to("cpu")
                             outputs = quantized_model(inputs)
+                            outputs = outputs.to(device)
                         else:
                             outputs = model(inputs)
 
@@ -120,7 +124,7 @@ def train_torch(FLAGS, kwargs):
                     name = os.path.join(
                         TrainConfig.checkpoints_folder,
                         FLAGS.csv,
-                        "{}__torch_{}__epoch_{}_val_acc_{:.3f}_vs_{:.3f}_val_loss_{:.2f}_vs_{:.2f}.h5".format(
+                        "{}__{}__epoch_{}__val_acc_{:.3f}_vs_{:.3f}_val_loss_{:.2f}_vs_{:.2f}.pth".format(
                             FLAGS.csv,
                             FLAGS.pretrained,
                             epoch,
@@ -130,7 +134,7 @@ def train_torch(FLAGS, kwargs):
                             train_loss,
                         ))
                     create_folder(name)
-                    torch.save(model, name)
+                    torch.save(model.state_dict(), name)
                     if epoch_acc > best_acc:
                         best_acc = epoch_acc
                         best_model_wts = copy.deepcopy(model.state_dict())
@@ -153,21 +157,30 @@ def train_torch(FLAGS, kwargs):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     depth_trainable = FLAGS.depth_trainable
     num_classes = len(np.unique(kwargs['train'].label))
-    if FLAGS.saved == '-':
-        if FLAGS.pretrained == "custom_mobilenetv2":
-            model_ft = MobileNetV2Q()
-            pretrained_model = torch.hub.load(
-                'pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True)
-            pretrained_model.classifier[1] = nn.Linear(
-                pretrained_model.classifier[1].in_features, 2)
-            model_ft.load_state_dict(pretrained_model.state_dict())
-        else:
-            model_ft = timm.create_model(
-                FLAGS.pretrained, pretrained=True, num_classes=num_classes
-            )
+    if FLAGS.pretrained == "custom_mobilenetv2":
+        model_ft = MobileNetV2Q()
+        pretrained_model = torch.hub.load(
+            'pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True)
+        pretrained_model.classifier[1] = nn.Linear(
+            pretrained_model.classifier[1].in_features, 2)
+        model_ft.load_state_dict(pretrained_model.state_dict())
     else:
-        model_ft = torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved))
+        model_ft = timm.create_model(
+            FLAGS.pretrained, pretrained=True, num_classes=num_classes
+        )
+
+    if FLAGS.quantize:
+        model_ft = model_ft.to("cpu")
+        model_ft.eval()
+        model_ft.fuse_model()
+        model_ft.qconfig = torch.quantization.get_default_qat_qconfig("fbgemm")
+        torch.quantization.prepare_qat(model_ft, inplace=True)
+
+    if FLAGS.saved != '-':
+        model_ft.load_state_dict(torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved)))
+        # model_ft = torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved))
         print(FLAGS.saved + ' loaded')
+
     model_ft = model_ft.to(device)
     params_to_update = model_ft.parameters()
     if depth_trainable > 0:
@@ -203,11 +216,9 @@ def train_torch(FLAGS, kwargs):
 
     input_size = (3, FLAGS.img_size, FLAGS.img_size)
     # print(summary(model_ft, input_size=input_size))
-    print(f"weights : {weights}")
-    if FLAGS.quantize:
-        model_ft.fuse_model()
-        model_ft.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
-        torch.quantization.prepare_qat(model_ft, inplace=True)
+    print(f"weights: {weights}")
+
+
     model_ft = train(
         model_ft,
         FLAGS.pretrained,
