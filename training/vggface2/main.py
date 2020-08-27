@@ -19,7 +19,13 @@ import argparse
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from random import shuffle
+
+
+ 
 torch.nn.Module.dump_patches = False
+
+
+
 class ArcFace(nn.Module):
     def __init__(self, in_features, out_features, device, s=30.0, m=0.50):
         super(ArcFace, self).__init__()

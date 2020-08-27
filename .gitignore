@@ -9,4 +9,5 @@ __pycache__
 *.tensor
 *.jpg
 *.pk
+*.pth
 .ipynb_checkpoints
