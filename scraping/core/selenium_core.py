@@ -17,7 +17,7 @@ class Bot:
 
     def add_cookies(self, cookies, reload=True):
         for c in cookies:
-            self.browser.add_cookies(c)
+            self.browser.add_cookie(c)
         self.reload()
 
     def send_key(self, element, key):
