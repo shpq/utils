@@ -53,13 +53,7 @@ def train_torch(FLAGS, kwargs):
                     enumerate(dataloaders[phase]),
                     total=len(dataloaders[phase]),
                 )
-                if quantize and phase == "valid":
-                    if epoch > 0:
-                        # Freeze quantizer parameters
-                        model.apply(torch.quantization.disable_observer)
-                    if epoch > 0:
-                        # Freeze batch norm mean and variance estimates
-                        model.apply(torch.nn.intrinsic.qat.freeze_bn_stats)
+
                 if quantize and phase == "valid":
                     model = model.to("cpu")
                 for index, chunk in pbar:
@@ -104,10 +98,18 @@ def train_torch(FLAGS, kwargs):
                     # statistics
                     running_loss += loss.item() * inputs.size(0)
                     running_corrects += (preds == labels.data).float().sum()
+
                 if phase == "train":
                     train_loss = running_loss / dataset_sizes[phase]
                     train_acc = running_corrects / dataset_sizes[phase]
                     scheduler.step()
+                if quantize and phase == "valid":
+                    if epoch > 2:
+                        # Freeze quantizer parameters
+                        model.apply(torch.quantization.disable_observer)
+                    if epoch > 1:
+                        # Freeze batch norm mean and variance estimates
+                        model.apply(torch.nn.intrinsic.qat.freeze_bn_stats)
                 print(running_corrects)
                 print(dataset_sizes[phase])
                 epoch_loss = running_loss / dataset_sizes[phase]
@@ -134,7 +136,10 @@ def train_torch(FLAGS, kwargs):
                             train_loss,
                         ))
                     create_folder(name)
-                    torch.save(model.state_dict(), name)
+                    if quantize:
+                        torch.save(quantized_model.state_dict(), name)
+                    else:
+                        torch.save(model.state_dict(), name)
                     if epoch_acc > best_acc:
                         best_acc = epoch_acc
                         best_model_wts = copy.deepcopy(model.state_dict())
@@ -173,12 +178,12 @@ def train_torch(FLAGS, kwargs):
         model_ft = model_ft.to("cpu")
         model_ft.eval()
         model_ft.fuse_model()
-        model_ft.qconfig = torch.quantization.get_default_qat_qconfig("fbgemm")
+        qconfig = FLAGS.qconfig if FLAGS.qconfig else "qnnpack"
+        model_ft.qconfig = torch.quantization.get_default_qat_qconfig(qconfig)
         torch.quantization.prepare_qat(model_ft, inplace=True)
 
     if FLAGS.saved != '-':
         model_ft.load_state_dict(torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved)))
-        # model_ft = torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved))
         print(FLAGS.saved + ' loaded')
 
     model_ft = model_ft.to(device)
