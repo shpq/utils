@@ -121,5 +121,11 @@ if __name__ == "__main__":
         action="store_true",
     )
 
+    parser.add_argument(
+        "--qconfig",
+        default=None,
+        help="fbgemm or qnnpack qconfig for quantization",
+    )
+
     FLAGS = parser.parse_args()
     main(FLAGS)
