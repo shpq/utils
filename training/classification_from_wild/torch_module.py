@@ -164,10 +164,10 @@ def train_torch(FLAGS, kwargs):
     num_classes = len(np.unique(kwargs['train'].label))
     if FLAGS.pretrained.startswith("hub_"):
         model_name = FLAGS.pretrained[4:]
-        pretrained_model = torch.hub.load(
+        model_ft = torch.hub.load(
             'pytorch/vision:v0.6.0', model_name, pretrained=True)
-        pretrained_model.classifier[1] = nn.Linear(
-            pretrained_model.classifier[1].in_features, num_classes)
+        model_ft.classifier[1] = nn.Linear(
+            model_ft.classifier[1].in_features, num_classes)
     elif FLAGS.pretrained == "custom_mobilenetv2":
         model_ft = MobileNetV2Q()
         pretrained_model = torch.hub.load(
