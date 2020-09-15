@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import timm
 from custom_models.mobilenetv2 import MobileNetV2Q
 import shutil
@@ -7,15 +8,18 @@ import onnx
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 from onnx2keras import onnx_to_keras
+import subprocess
 
 
 def load_model(filename, modelname, jit=False, quantized=False,
-               example_input=None, make_jit=True, num_classes=2):
+               example_input=None, make_jit=True, num_classes=2,
+               qconfig="qnnpack", add_softmax=False):
     if jit:
         jit_model = torch.jit.load(filename)
         return jit_model
 
-    state = torch.load(filename)
+    if filename is not None:
+        state = torch.load(filename, map_location="cpu")
 
     if modelname != "MobileNetV2Q":
         torch_model = timm.create_model(
@@ -28,12 +32,20 @@ def load_model(filename, modelname, jit=False, quantized=False,
         torch_model.eval()
         torch_model.fuse_model()
         torch_model.qconfig = torch.quantization.get_default_qat_qconfig(
-            "fbgemm")
+            qconfig)
         torch.quantization.prepare_qat(torch_model.eval(), inplace=True)
-
-    torch_model.load_state_dict(state)
-    if quantized:
         torch.quantization.convert(torch_model, inplace=True)
+
+    if filename is not None:
+        torch_model.load_state_dict(state)
+
+    if add_softmax:
+        if example_input is not None:
+            print(torch_model(example_input))
+        torch_model = nn.Sequential(torch_model, nn.Softmax())
+        if example_input is not None:
+            print("after adding softmax")
+            print(torch_model(example_input))
 
     if make_jit:
         torch_model.eval()
@@ -43,12 +55,12 @@ def load_model(filename, modelname, jit=False, quantized=False,
     return torch_model
 
 
-def quantize(model):
+def quantize(model, qconfig):
     model.to("cpu")
     model.eval()
     model.fuse_model()
     model.qconfig = torch.quantization.get_default_qat_qconfig(
-        "fbgemm")
+        qconfig)
     torch.quantization.prepare_qat(model.eval(), inplace=True)
     torch.quantization.convert(model, inplace=True)
 
@@ -57,43 +69,20 @@ def quantize(model):
 
 
 def pytorch2savedmodel(onnx_model_path, saved_model_dir):
-    onnx_model = onnx.load(onnx_model_path)
-
-    input_names = ['image_array']
-    k_model = onnx_to_keras(onnx_model=onnx_model, input_names=input_names,
-                            change_ordering=True, verbose=False)
-
-    weights = k_model.get_weights()
-
-    K.set_learning_phase(0)
-
-    saved_model_dir = Path(saved_model_dir)
-    if saved_model_dir.exists():
-        shutil.rmtree(str(saved_model_dir))
-    saved_model_dir.mkdir()
-
-    with K.get_session() as sess:
-        init = tf.global_variables_initializer()
-        sess.run(init)
-        k_model.set_weights(weights)
-
-        tf.saved_model.simple_save(
-            sess,
-            str(saved_model_dir.joinpath('1')),
-            inputs={'image_array': k_model.input},
-            outputs=dict((output.name, tensor) for output, tensor in zip(
-                onnx_model.graph.output, k_model.outputs))
-        )
+    subprocess.check_output(
+        ['onnx-tf', 'convert', '-i', onnx_model_path, "-o",
+         saved_model_dir + "/saved_model.pb"])
 
 
-def savedmodel2tflite(saved_model_dir, tflite_model_path, quantize=False):
-    saved_model_dir = str(Path(saved_model_dir).joinpath('1'))
-    converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
-    if quantize:
-        converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
+def savedmodel2tflite(saved_model_dir, tflite_model_path, quantize=False,
+                      input_names=["image_array"], output_names=["classification"]):
+
+    converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
+        graph_def_file=saved_model_dir + "/saved_model.pb",
+        input_arrays=input_names,
+        output_arrays=output_names
+    )
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
     tflite_model = converter.convert()
-
-    with open(tflite_model_path, 'wb') as f:
+    with tf.io.gfile.GFile('model.tflite', 'wb') as f:
         f.write(tflite_model)
-
-    return tflite_model

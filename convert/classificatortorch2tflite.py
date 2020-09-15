@@ -27,6 +27,8 @@ if __name__ == "__main__":
     args.add_argument("--size_y", type=int, help="Vertical size of image")
     args.add_argument("--model_dir", type=str,
                       help="Choose directory for model saving")
+    args.add_argument("--qconfig", type=str,
+                      help="fbgemm or qnnpack")
 
     args = args.parse_args()
     example_input = torch.rand(1, 3, args.size_x, args.size_y)
@@ -43,8 +45,10 @@ if __name__ == "__main__":
     example_output = model(example_input)
     torch.onnx.export(model, example_input, onnx_model_path, example_outputs=example_output,
                       input_names=input_names, output_names=output_names,
-                      operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK)
-
+                      operator_export_type=torch.onnx.OperatorExportTypes.ONNX,
+                      opset_version=12)
+    print("onnx2tflite")
     pytorch2savedmodel(onnx_model_path, args.model_dir)
-    tflite_quantized_model = savedmodel2tflite(
-        args.model_dir, args.save_path, quantize=True)
+    tflite_model = savedmodel2tflite(
+        args.model_dir, args.save_path, quantize=args.quantized,
+        input_names=input_names, output_names=output_names)
