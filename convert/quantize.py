@@ -18,7 +18,8 @@ if __name__ == "__main__":
                       help="Is model stored in jit format?")
     args.add_argument("--size_x", type=int, help="Horizontal size of image")
     args.add_argument("--size_y", type=int, help="Vertical size of image")
-
+    args.add_argument("--qconfig", type=str,
+                      help="fbgemm or qnnpack")
     args = args.parse_args()
 
     example_input = torch.rand(1, 3, args.size_x, args.size_y)
@@ -27,5 +28,5 @@ if __name__ == "__main__":
                        example_input=example_input, make_jit=False,
                        num_classes=args.num_classes)
     
-    quantized_model = quantize(model)
+    quantized_model = quantize(model, args.qconfig)
     torch.save(quantized_model.state_dict(), args.save_path)

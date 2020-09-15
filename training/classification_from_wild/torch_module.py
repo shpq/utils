@@ -162,12 +162,16 @@ def train_torch(FLAGS, kwargs):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     depth_trainable = FLAGS.depth_trainable
     num_classes = len(np.unique(kwargs['train'].label))
-    if FLAGS.pretrained == "custom_mobilenetv2":
+    if FLAGS.pretrained.startswith("hub_"):
+        model_name = FLAGS.pretrained[4:]
+        pretrained_model = torch.hub.load(
+            'pytorch/vision:v0.6.0', model_name, pretrained=True,
+            num_classes=num_classes)
+    elif FLAGS.pretrained == "custom_mobilenetv2":
         model_ft = MobileNetV2Q()
         pretrained_model = torch.hub.load(
-            'pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True)
-        pretrained_model.classifier[1] = nn.Linear(
-            pretrained_model.classifier[1].in_features, 2)
+            'pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True,
+            num_classes=num_classes)
         model_ft.load_state_dict(pretrained_model.state_dict())
     else:
         model_ft = timm.create_model(
@@ -183,7 +187,8 @@ def train_torch(FLAGS, kwargs):
         torch.quantization.prepare_qat(model_ft, inplace=True)
 
     if FLAGS.saved != '-':
-        model_ft.load_state_dict(torch.load(os.path.join(TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved)))
+        model_ft.load_state_dict(torch.load(os.path.join(
+            TrainConfig.checkpoints_folder, FLAGS.csv, FLAGS.saved)))
         print(FLAGS.saved + ' loaded')
 
     model_ft = model_ft.to(device)
@@ -222,7 +227,6 @@ def train_torch(FLAGS, kwargs):
     input_size = (3, FLAGS.img_size, FLAGS.img_size)
     # print(summary(model_ft, input_size=input_size))
     print(f"weights: {weights}")
-
 
     model_ft = train(
         model_ft,

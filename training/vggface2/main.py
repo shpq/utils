@@ -137,7 +137,7 @@ class ArcFace(nn.Module):
 
 
 def load_model(saved, checkpoint_path, custom=False):
-    #model = torchvision.models.resnet18()
+
     if saved is None and custom:
         model = MobileNetV2Q()
         # model = timm.create_model('efficientnet_b0', pretrained=True)
@@ -149,11 +149,12 @@ def load_model(saved, checkpoint_path, custom=False):
         del model.classifier
     elif saved is None and not custom:
         model = timm.create_model('tf_efficientnet_b1_ns', pretrained=True)
-        model = torch.nn.Sequential(*(list(model.children())[:-1]))
+        model = torch.nn.Sequential(*(list(model.children())[:-1] + [nn.Dropout(p=0.45)]))
+
     else:
         print(f"open saved: {os.path.join(checkpoint_path, saved)}")
         model = timm.create_model('tf_efficientnet_b1_ns', pretrained=False)
-        model = torch.nn.Sequential(*(list(model.children())[:-1]))
+        model = torch.nn.Sequential(*(list(model.children())[:-1] + [nn.Dropout(p=0.45)]))
         model.load_state_dict(torch.load(os.path.join(checkpoint_path, saved)))
 
     return model
@@ -416,14 +417,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(params, lr=3.0e-4)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=7, gamma=0.1)
-    """
-    print("preparing qat")
-    model = model.to("cpu")
-    model.eval()
-    model.fuse_model()
-    model.qconfig = torch.quantization.get_default_qat_qconfig("fbgemm")
-    torch.quantization.prepare_qat(model, inplace=True)
-    print("start training")"""
+
     model = model.to(device)
     num_epochs = 100
     train_model(model, loss, metric, optimizer, scheduler, device,
