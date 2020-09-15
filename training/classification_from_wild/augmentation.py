@@ -20,7 +20,7 @@ def additional_augmenation_good(image):
             #A.VerticalFlip(),
             #A.RandomRotate90(),
             A.ShiftScaleRotate(
-                shift_limit=0.02, scale_limit=0.02, rotate_limit=10, p=0.3
+                shift_limit=0.02, scale_limit=0.02, rotate_limit=10, p=0.1
             ),
             #A.Blur(blur_limit=2, p=0.05),
             #A.OpticalDistortion(p=0.05),
