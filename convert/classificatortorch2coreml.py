@@ -2,8 +2,10 @@ import torch
 import argparse
 import coremltools as ct
 import timm
-from utils import load_model
+from utils import load_model, url2image, default_transformation
 from add_some_ops.torch import constant_pad_nd
+import numpy as np
+from pprint import pprint
 
 
 description = "Example: python3 classificatortorch2coreml.py " +\
@@ -32,6 +34,8 @@ if __name__ == "__main__":
     args.add_argument("--size_y", type=int, help="Vertical size of image")
     args.add_argument("--qconfig", type=str, default=None,
                       help="fbgemm or qnnpack")
+    args.add_argument("--test_path", type=str, default=None,
+                      help="Path to .txt file with urls to compare models")
 
     args = args.parse_args()
 
@@ -47,17 +51,31 @@ if __name__ == "__main__":
         class_labels = class_labels.split("\n")
 
     scale = 1.0 / 255.0 / 0.226
+    bias = [-0.485 / 0.229,
+            -0.456 / 0.224,
+            -0.406 / 0.225]
 
     image_input = ct.ImageType(
-        name="image_input", shape=example_input.shape
-    )
-    ct_args = dict(is_bgr=False,
-                   red_bias=-0.485 / 0.229,
-                   green_bias=-0.456 / 0.224,
-                   blue_bias=-0.406 / 0.225,
-                   image_scale=scale)
+        name="image_input", shape=example_input.shape,
+        bias=bias, scale=scale)
 
+
+    jit_model.eval()
     ct_model = ct.convert(jit_model, inputs=[image_input],
-                          classifier_config=ct.ClassifierConfig(class_labels),
-                          preprocessing_args=ct_args)
+                          classifier_config=ct.ClassifierConfig(class_labels))
+    if args.test_path:
+        with open(args.test_path, "r") as f:
+            urls = f.read().split("\n")
+        trans = default_transformation()
+        d = []
+        for url in urls:
+            image = url2image(url, (args.size_x, args.size_y))
+            transformed_image = trans(np.array(image))
+            pred_jit = jit_model(torch.unsqueeze(transformed_image, 0))
+            d.append({
+                "url": url,
+                "jit": pred_jit,
+            })
+        pprint(d)
+
     ct_model.save(args.save_path)

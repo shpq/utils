@@ -13,6 +13,9 @@ import os
 from custom_models.mobilenet_v2_quantization import MobileNetV2Q
 
 
+torch.manual_seed(0)
+
+
 def train_torch(FLAGS, kwargs):
 
     dataloaders = kwargs["dataloaders"]
@@ -126,9 +129,10 @@ def train_torch(FLAGS, kwargs):
                     name = os.path.join(
                         TrainConfig.checkpoints_folder,
                         FLAGS.csv,
-                        "{}__{}__epoch_{}__val_acc_{:.3f}_vs_{:.3f}_val_loss_{:.2f}_vs_{:.2f}.pth".format(
+                        "{}__{}__{}__epoch_{}_val_acc_{:.3f}_vs_{:.3f}_val_loss_{:.2f}_vs_{:.2f}.pth".format(
                             FLAGS.csv,
                             FLAGS.pretrained,
+                            FLAGS.src,
                             epoch,
                             epoch_acc,
                             train_acc,
@@ -162,13 +166,12 @@ def train_torch(FLAGS, kwargs):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     depth_trainable = FLAGS.depth_trainable
     num_classes = len(np.unique(kwargs['train'].label))
-    if FLAGS.pretrained.startswith("hub_"):
-        model_name = FLAGS.pretrained[4:]
+    if FLAGS.src == "hub":
         model_ft = torch.hub.load(
-            'pytorch/vision:v0.6.0', model_name, pretrained=True)
+            'pytorch/vision:v0.6.0', FLAGS.pretrained, pretrained=True)
         model_ft.classifier[1] = nn.Linear(
             model_ft.classifier[1].in_features, num_classes)
-    elif FLAGS.pretrained == "custom_mobilenetv2":
+    elif (FLAGS.pretrained == "mobilenetv2" and FLAGS.src == "custom"):
         model_ft = MobileNetV2Q()
         pretrained_model = torch.hub.load(
             'pytorch/vision:v0.6.0', 'mobilenet_v2', pretrained=True,
@@ -176,10 +179,13 @@ def train_torch(FLAGS, kwargs):
         pretrained_model.classifier[1] = nn.Linear(
             pretrained_model.classifier[1].in_features, num_classes)
         model_ft.load_state_dict(pretrained_model.state_dict())
-    else:
+    elif FLAGS.src == "timm":
         model_ft = timm.create_model(
-            FLAGS.pretrained, pretrained=True, num_classes=num_classes
+            FLAGS.pretrained, pretrained=True, num_classes=num_classes,
+            drop_rate= float(FLAGS.dropout)
         )
+    else:
+        raise NotImplementedError
 
     if FLAGS.quantize:
         model_ft = model_ft.to("cpu")

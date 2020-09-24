@@ -43,20 +43,6 @@ if __name__ == "__main__":
     parser.add_argument("--csv", type=str, help="Name of csv in csv folder")
 
     parser.add_argument(
-        "--cat",
-        default=False,
-        help="Is data categorical?",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "--parallel_download",
-        default=False,
-        help="Is data categorical?",
-        action="store_true",
-    )
-
-    parser.add_argument(
         "--cached",
         default=False,
         help="Use cached split?",
@@ -82,13 +68,6 @@ if __name__ == "__main__":
         type=int,
         default=1,
         help="Depth of trainable layers",
-    )
-
-    parser.add_argument(
-        "--framework",
-        type=str,
-        default="keras",
-        help="Which framework do you wanna use? (keras / torch)",
     )
 
     parser.add_argument(
@@ -125,6 +104,18 @@ if __name__ == "__main__":
         "--qconfig",
         default=None,
         help="fbgemm or qnnpack qconfig for quantization",
+    )
+
+    parser.add_argument(
+        "--dropout",
+        default=0,
+        help="Dropout rate to put before last layer",
+    )
+
+    parser.add_argument(
+        "--src",
+        default="timm",
+        help="Source where we can get this model",
     )
 
     FLAGS = parser.parse_args()
