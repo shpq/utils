@@ -5,6 +5,7 @@ import cv2
 from torch.utils import data
 from utils import Cipher
 import os
+from PIL import Image
 
 
 class HDF5Dataset(data.Dataset):
@@ -16,28 +17,18 @@ class HDF5Dataset(data.Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        # img = Image.open(os.path.join(self.img_dir, self.img_names[index]))
-        image = cv2.imread(os.path.join(self.img_dir, self.img_names[index]))
-        try:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        except Exception as e:
-            print(e)
-            print(self.img_names[index])
-            raise
-        
+        img = Image.open(os.path.join(self.img_dir, self.img_names[index]))
         label = self.y[index]
-        img = image
+        image = img
         if self.transform is not None:
-            # img = self.transform(image=np.swapaxes(
-            #    np.swapaxes(np.array(img), 2, 0), 1, 2))["image"]
+
             if isinstance(self.transform, dict):
                 augmented = self.transform[label](image=image)
             else:
                 augmented = self.transform(image=image)
-            img = np.moveaxis(augmented, -1, 0) 
-            
-        return torch.from_numpy(img).float(), torch.tensor(label, dtype=torch.long)
+            image = augmented
+
+        return image, torch.tensor(label, dtype=torch.long)
 
     def __len__(self):
         return self.y.shape[0]
-    

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-setup(name="shpqutils",
+setup(name="shpq_utils",
       version="0.1.0",
       description="shpq utilities for different tasks",
       url="https://github.com/shpq/utils",

@@ -136,7 +136,7 @@ class ArcFace(nn.Module):
         return output
 
 
-def load_model(saved, checkpoint_path, custom=False):
+def load_model(saved, checkpoint_path, custom=False, dropout_rate=0.33):
 
     if saved is None and custom:
         model = MobileNetV2Q()
@@ -149,12 +149,14 @@ def load_model(saved, checkpoint_path, custom=False):
         del model.classifier
     elif saved is None and not custom:
         model = timm.create_model('tf_efficientnet_b1_ns', pretrained=True)
-        model = torch.nn.Sequential(*(list(model.children())[:-1] + [nn.Dropout(p=0.45)]))
+        model = torch.nn.Sequential(
+            *(list(model.children())[:-1] + [nn.Dropout(p=dropout_rate)]))
 
     else:
         print(f"open saved: {os.path.join(checkpoint_path, saved)}")
         model = timm.create_model('tf_efficientnet_b1_ns', pretrained=False)
-        model = torch.nn.Sequential(*(list(model.children())[:-1] + [nn.Dropout(p=0.45)]))
+        model = torch.nn.Sequential(
+            *(list(model.children())[:-1] + [nn.Dropout(p=dropout_rate)]))
         model.load_state_dict(torch.load(os.path.join(checkpoint_path, saved)))
 
     return model
@@ -403,7 +405,7 @@ if __name__ == "__main__":
     dataset_train = AlbuDataset(os.path.join(face_path, 'train'), transforms)
     dataset_test = AlbuDataset(os.path.join(
         face_path, 'test'), transforms_test)
-    batch_size = 64
+    batch_size = 50
     train_dataloader = torch.utils.data.DataLoader(
         dataset_train, shuffle=True, batch_size=batch_size)
     test_dataloader = torch.utils.data.DataLoader(

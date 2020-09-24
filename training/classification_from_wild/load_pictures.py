@@ -57,8 +57,7 @@ def extend_original_pics_storage(FLAGS, dataset, overwrite=False):
     urls_skipped = skip_loaded_urls(
         dataset, os.path.join(StorageName.storage_path, FLAGS.storage), overwrite
     )
-    if FLAGS.parallel_download:
-        return extend_original_pics_storage_parallel(FLAGS, urls_skipped, dataset, overwrite)
+    return extend_original_pics_storage_parallel(FLAGS, urls_skipped, dataset, overwrite)
 
 def skip_loaded_urls(dataset, storage_name, overwrite):
     if overwrite:

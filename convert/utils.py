@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import timm
@@ -7,8 +8,13 @@ from pathlib import Path
 import onnx
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
-from onnx2keras import onnx_to_keras
 import subprocess
+import requests
+from PIL import Image
+from torchvision import transforms
+import onnx
+from onnx_tf.backend import prepare
+
 
 
 def load_model(filename, modelname, jit=False, quantized=False,
@@ -21,7 +27,12 @@ def load_model(filename, modelname, jit=False, quantized=False,
     if filename is not None:
         state = torch.load(filename, map_location="cpu")
 
-    if modelname != "MobileNetV2Q":
+    if modelname.startswith("hub_"):
+        torch_model = torch.hub.load(
+            'pytorch/vision:v0.6.0', modelname[4:], pretrained=False)
+        torch_model.classifier[1] = nn.Linear(
+            torch_model.classifier[1].in_features, num_classes)
+    elif modelname != "MobileNetV2Q":
         torch_model = timm.create_model(
             modelname, pretrained=False, num_classes=num_classes)
     else:
@@ -42,6 +53,7 @@ def load_model(filename, modelname, jit=False, quantized=False,
     if add_softmax:
         if example_input is not None:
             print(torch_model(example_input))
+
         torch_model = nn.Sequential(torch_model, nn.Softmax())
         if example_input is not None:
             print("after adding softmax")
@@ -68,21 +80,37 @@ def quantize(model, qconfig):
     return model
 
 
-def pytorch2savedmodel(onnx_model_path, saved_model_dir):
-    subprocess.check_output(
-        ['onnx-tf', 'convert', '-i', onnx_model_path, "-o",
-         saved_model_dir + "/saved_model.pb"])
-
-
-def savedmodel2tflite(saved_model_dir, tflite_model_path, quantize=False,
+def savedmodel2tflite(onnx_model_path, saved_model_dir, tflite_model_path, quantize=False,
                       input_names=["image_array"], output_names=["classification"]):
-
+    model_onnx = onnx.load(onnx_model_path)
+    tf_rep = prepare(model_onnx)
+    print('inputs:', tf_rep.inputs)
+    print('outputs:', tf_rep.outputs)
+    tf_rep.export_graph(saved_model_dir + "/saved_model.pb")
     converter = tf.compat.v1.lite.TFLiteConverter.from_frozen_graph(
         graph_def_file=saved_model_dir + "/saved_model.pb",
-        input_arrays=input_names,
-        output_arrays=output_names
+        input_arrays=tf_rep.inputs,
+        output_arrays=tf_rep.outputs
     )
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.experimental_new_converter = True
+    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS, tf.lite.OpsSet.SELECT_TF_OPS]
+    
     tflite_model = converter.convert()
-    with tf.io.gfile.GFile('model.tflite', 'wb') as f:
+    with tf.io.gfile.GFile(tflite_model_path, 'wb') as f:
         f.write(tflite_model)
+
+
+def default_transformation():
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+    return transforms.Compose([
+        transforms.ToTensor(),
+        normalize])
+
+
+def url2image(url, size):
+    return Image.open(requests.get(url, stream=True).raw).resize(size)
+
