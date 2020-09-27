@@ -95,22 +95,27 @@ def savedmodel2tflite(onnx_model_path, saved_model_dir, tflite_model_path, quant
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.experimental_new_converter = True
     # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS, tf.lite.OpsSet.SELECT_TF_OPS]
-    
+
     tflite_model = converter.convert()
     with tf.io.gfile.GFile(tflite_model_path, 'wb') as f:
         f.write(tflite_model)
 
 
-def default_transformation():
+def default_transformation(framework="torch"):
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225]
     )
-    return transforms.Compose([
-        transforms.ToTensor(),
-        normalize])
+    if framework == "torch":
+        return transforms.Compose([
+            transforms.ToTensor(),
+            normalize])
+    elif framework in ["tflite", "keras"]:
+        return transforms.Compose([
+            normalize])
+    else:
+        raise NotImplementedError
 
 
 def url2image(url, size):
     return Image.open(requests.get(url, stream=True).raw).resize(size)
-
