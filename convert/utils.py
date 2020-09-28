@@ -14,7 +14,8 @@ from PIL import Image
 from torchvision import transforms
 import onnx
 from onnx_tf.backend import prepare
-
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
 def load_model(filename, modelname, jit=False, quantized=False,
@@ -102,16 +103,13 @@ def savedmodel2tflite(onnx_model_path, saved_model_dir, tflite_model_path, quant
 
 
 def default_transformation(framework="torch"):
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
-    )
+    normalize = A.Normalize()
     if framework == "torch":
-        return transforms.Compose([
-            transforms.ToTensor(),
-            normalize])
+        return A.Compose([
+            normalize,
+            ToTensorV2()])
     elif framework in ["tflite", "keras"]:
-        return transforms.Compose([
+        return A.Compose([
             normalize])
     else:
         raise NotImplementedError
