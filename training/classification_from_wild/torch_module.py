@@ -17,10 +17,6 @@ torch.manual_seed(0)
 
 
 def train_torch(FLAGS, kwargs):
-
-    dataloaders = kwargs["dataloaders"]
-    dataset_sizes = {x: len(kwargs[x]) for x in ["train", "valid"]}
-
     def train(
         model,
         model_name,
@@ -163,6 +159,9 @@ def train_torch(FLAGS, kwargs):
         torch.save(model, name)
         return model
 
+    dataloaders = kwargs["dataloaders"]
+    dataset_sizes = {x: len(kwargs[x]) for x in ["train", "valid"]}
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     depth_trainable = FLAGS.depth_trainable
     num_classes = len(np.unique(kwargs['train'].label))
@@ -182,7 +181,7 @@ def train_torch(FLAGS, kwargs):
     elif FLAGS.src == "timm":
         model_ft = timm.create_model(
             FLAGS.pretrained, pretrained=True, num_classes=num_classes,
-            drop_rate= float(FLAGS.dropout)
+            drop_rate=float(FLAGS.dropout)
         )
     else:
         raise NotImplementedError
@@ -248,3 +247,4 @@ def train_torch(FLAGS, kwargs):
         device=device,
         quantize=FLAGS.quantize,
     )
+

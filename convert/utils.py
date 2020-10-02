@@ -16,7 +16,6 @@ import onnx
 from onnx_tf.backend import prepare
 
 
-
 def load_model(filename, modelname, jit=False, quantized=False,
                example_input=None, make_jit=True, num_classes=2,
                qconfig="qnnpack", add_softmax=False):

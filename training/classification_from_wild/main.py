@@ -10,8 +10,8 @@ def change_cf(FLAGS):
     TrainConfig.batch_size = FLAGS.batch_size
     Config.size_images = (FLAGS.img_size, FLAGS.img_size)
     TrainConfig.input_shape_raw = (FLAGS.img_size, FLAGS.img_size, 3)
-    StorageName.storage = f"{FLAGS.storage}_{FLAGS.img_size}x{FLAGS.img_size}"
-    FLAGS.storage = f"{FLAGS.storage}_{FLAGS.img_size}x{FLAGS.img_size}"
+    StorageName.storage = f"{FLAGS.storage}"
+    FLAGS.storage = f"{FLAGS.storage}"
 
 
 def create_folders():
@@ -117,6 +117,22 @@ if __name__ == "__main__":
         default="timm",
         help="Source where we can get this model",
     )
+
+    parser.add_argument(
+        "--framework",
+        default="torch",
+        help="Which framework do you want to use for training",
+    )
+
+    parser.add_argument(
+        "--strong_aug",
+        default=None,
+        help="Use strong augs for migration?",
+        type=float,
+    )
+
+    parser.add_argument("--epoch", type=int, default=5, help="Image size")
+
 
     FLAGS = parser.parse_args()
     main(FLAGS)
