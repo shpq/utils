@@ -17,7 +17,6 @@ from onnx_tf.backend import prepare
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-
 def load_model(filename, modelname, jit=False, quantized=False,
                example_input=None, make_jit=True, num_classes=2,
                qconfig="qnnpack", add_softmax=False):

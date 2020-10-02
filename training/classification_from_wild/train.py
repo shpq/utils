@@ -7,6 +7,7 @@ import os
 import pandas as pd
 from dataset_hdf5 import HDF5Dataset
 from torch.utils.data import DataLoader
+from train_keras import train_keras, DataGenerator
 from augmentation import get_augmentation
 from torch_module import train_torch
 
@@ -19,9 +20,32 @@ def torch_generators(
     transformations_for_phase = get_augmentation()
     dataloaders = {
         x: DataLoader(
-            HDF5Dataset(storage_path, y, transformations_for_phase[x]),
+            HDF5Dataset(storage_path, y, FLAGS.img_size,
+                        transformations_for_phase[x]),
             batch_size=batch_size,
             num_workers=1,
+        )
+        for x, y in {"train": train, "valid": test}.items()
+    }
+    kwargs["dataloaders"] = dataloaders
+    kwargs["train"] = train
+    kwargs["valid"] = test
+    kwargs["class_weight"] = class_weights
+    return kwargs
+
+
+def keras_generators(
+    train, test, batch_size, FLAGS, class_weights, dataset_path
+):
+    kwargs = dict()
+    storage_path = os.path.join(StorageName.storage_path, FLAGS.storage)
+    transformations_for_phase = get_augmentation()
+    dataloaders = {
+        x: DataGenerator(
+            storage_path, y, transform=transformations_for_phase[x],
+            batch_size=FLAGS.batch_size,
+            num_classes=2, shuffle=False, x=FLAGS.img_size, y=FLAGS.img_size,
+            strong_aug=FLAGS.strong_aug,
         )
         for x, y in {"train": train, "valid": test}.items()
     }
@@ -66,9 +90,14 @@ def get_train_val_generators(FLAGS):
     print(f"Train shape : {train.shape}")
     print(f"Test shape : {test.shape}")
     batch_size = FLAGS.batch_size
-    return torch_generators(
-        train, test, batch_size, FLAGS, class_weights, datasets_path
-    )
+    if FLAGS.framework == "torch":
+        return torch_generators(
+            train, test, batch_size, FLAGS, class_weights, datasets_path
+        )
+    elif FLAGS.framework == "keras":
+        return keras_generators(
+            train, test, batch_size, FLAGS, class_weights, datasets_path
+        )
 
 
 def get_fit_generator_kwargs(FLAGS):
@@ -77,4 +106,7 @@ def get_fit_generator_kwargs(FLAGS):
 
 def train_model(FLAGS):
     kwargs = get_fit_generator_kwargs(FLAGS)
-    train_torch(FLAGS, kwargs)
+    if FLAGS.framework == "torch":
+        train_torch(FLAGS, kwargs)
+    elif FLAGS.framework == "keras":
+        train_keras(FLAGS, kwargs)
