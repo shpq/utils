@@ -7,6 +7,11 @@ import tensorflow_model_optimization as tfmot
 from tensorflow import keras
 import argparse
 from pprint import pprint
+from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+trans = default_transformation(framework="keras")
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
@@ -26,8 +31,24 @@ if __name__ == "__main__":
     keras_model.summary()
     converter = tf.lite.TFLiteConverter.from_keras_model(keras_model)
 
+    if args.test_path:
+        with open(args.test_path, "r") as f:
+            urls = f.read().split("\n")
+
+    def representative_dataset():
+        return [[np.expand_dims(trans(image=np.array(url2image(
+            url, (keras_model.input.shape[1], keras_model.input.shape[2]))))["image"], axis=0)] for url in urls]
+
     if args.quantized:
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        converter.representative_dataset = representative_dataset
+        # converter.inference_input_type = tf.uint8
+        # converter.inference_output_type = tf.uint8
+        converter.target_spec.supported_ops = [
+            tf.lite.OpsSet.TFLITE_BUILTINS,
+            tf.lite.OpsSet.TFLITE_BUILTINS_INT8,
+        ]
+        converter._experimental_new_quantizer = True
 
     tflite_model = converter.convert()
 
@@ -44,13 +65,12 @@ if __name__ == "__main__":
         input_shape = input_details[0]["shape"]
         with open(args.test_path, "r") as f:
             urls = f.read().split("\n")
-        trans = default_transformation(framework="keras")
         d = []
-        for url in urls:
+
+        for url in tqdm(urls):
             image = url2image(url, (input_shape[1], input_shape[2]))
             transformed_image = trans(image=np.array(image))["image"]
             transformed_image = np.expand_dims(transformed_image, axis=0)
-            # maybe wrapped?
             keras_pred = keras_model.predict(transformed_image)
             tflite_model.set_tensor(
                 input_details[0]["index"], transformed_image)
@@ -60,6 +80,45 @@ if __name__ == "__main__":
             d.append({
                 "url": url,
                 "keras": keras_pred,
-                "tflite": tflite_pred
+                "tflite": tflite_pred,
+                "image": image
             })
-        pprint(d)
+
+        d = sorted(d, key=lambda x: x["tflite"][0][1])
+        with PdfPages("beauty_tflite.pdf") as pdf:
+            for el in tqdm(d):
+                try:
+                    img = el["image"]
+                    score = el["tflite"][0][1]
+                    url = el["url"]
+                    plt.figure(figsize=(20, 20))
+                    plt.title(f"{score}\n {url}")
+                    plt.imshow(img)
+
+                    pdf.savefig()
+                    plt.clf()
+                    plt.close()
+
+                except Exception as e:
+                    print(e)
+                    continue
+
+        d = sorted(d, key=lambda x: x["keras"][0][1])
+
+        with PdfPages("beauty_keras.pdf") as pdf:
+            for el in tqdm(d):
+                try:
+                    img = el["image"]
+                    score = el["keras"][0][1]
+                    url = el["url"]
+                    plt.figure(figsize=(20, 20))
+                    plt.title(f"{score}\n {url}")
+                    plt.imshow(img)
+
+                    pdf.savefig()
+                    plt.clf()
+                    plt.close()
+
+                except Exception as e:
+                    print(e)
+                    continue
