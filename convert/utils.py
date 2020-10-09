@@ -5,7 +5,7 @@ import timm
 from custom_models.mobilenetv2 import MobileNetV2Q
 import shutil
 from pathlib import Path
-import onnx
+# import onnx
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 import subprocess
@@ -13,7 +13,7 @@ import requests
 from PIL import Image
 from torchvision import transforms
 import onnx
-from onnx_tf.backend import prepare
+# from onnx_tf.backend import prepare
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
