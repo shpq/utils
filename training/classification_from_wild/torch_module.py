@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import timm
-# from torchsummary import summary
 from utils import create_folder, TrainConfig
 import os
 from custom_models.mobilenet_v2_quantization import MobileNetV2Q
@@ -101,14 +100,16 @@ def train_torch(FLAGS, kwargs):
                 if phase == "train":
                     train_loss = running_loss / dataset_sizes[phase]
                     train_acc = running_corrects / dataset_sizes[phase]
-                    scheduler.step()
-                if quantize and phase == "valid":
-                    if epoch > 2:
-                        # Freeze quantizer parameters
-                        model.apply(torch.quantization.disable_observer)
-                    if epoch > 1:
-                        # Freeze batch norm mean and variance estimates
-                        model.apply(torch.nn.intrinsic.qat.freeze_bn_stats)
+
+                if phase == "valid":
+                    scheduler.step(train_acc)
+                    if quantize:
+                        if epoch > 2:
+                            # Freeze quantizer parameters
+                            model.apply(torch.quantization.disable_observer)
+                        if epoch > 1:
+                            # Freeze batch norm mean and variance estimates
+                            model.apply(torch.nn.intrinsic.qat.freeze_bn_stats)
                 print(running_corrects)
                 print(dataset_sizes[phase])
                 epoch_loss = running_loss / dataset_sizes[phase]
@@ -226,14 +227,13 @@ def train_torch(FLAGS, kwargs):
     weights = torch.FloatTensor(weights).cuda()
     criterion = nn.CrossEntropyLoss(weight=weights)
 
-    optimizer_ft = optim.SGD(params_to_update, lr=FLAGS.lr, momentum=0.9)
+    optimizer_ft = optim.Adam(params_to_update, lr=FLAGS.lr)
 
-    exp_lr_scheduler = lr_scheduler.StepLR(
-        optimizer_ft, step_size=FLAGS.epoch_reduce, gamma=FLAGS.gamma
-    )
+    exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(
+        optimizer_ft, factor=FLAGS.gamma, patience=FLAGS.epoch_reduce, mode="max")
 
     input_size = (3, FLAGS.img_size, FLAGS.img_size)
-    # print(summary(model_ft, input_size=input_size))
+
     print(f"weights: {weights}")
 
     model_ft = train(
@@ -247,4 +247,3 @@ def train_torch(FLAGS, kwargs):
         device=device,
         quantize=FLAGS.quantize,
     )
-

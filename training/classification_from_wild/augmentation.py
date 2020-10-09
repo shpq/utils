@@ -10,20 +10,20 @@ def additional_augmenation_good(image, x, y, mode="torch"):
     compose_list = [
         A.Resize(x, y),
         # A.RandomCrop(120, 120),
-        A.Blur(blur_limit=(4, 6), p=p_small),
-        A.RandomBrightness(p=p_small, limit=(-0.5, 0.5)),
-        A.JpegCompression(quality_lower=35, quality_upper=70, p=p_small),
-        A.GaussNoise(var_limit=1000, p=p_small),
+        # A.Blur(blur_limit=(4, 6), p=p_small),
+        # A.RandomBrightness(p=p_small, limit=(-0.5, 0.5)),
+        # A.JpegCompression(quality_lower=35, quality_upper=70, p=p_small),
+        # A.GaussNoise(var_limit=1000, p=p_small),
         # A.RandomSunFlare(p=p_small),
-        A.Downscale(p=p_small),
+        # A.Downscale(p=p_small),
         # A.CLAHE(p=0.05),
         # A.RandomContrast(p=0.05),
         # A.RandomBrightness(p=0.05),
         A.HorizontalFlip(),
-        # A.VerticalFlip(),
+        A.VerticalFlip(),
         # A.RandomRotate90(),
         A.ShiftScaleRotate(
-            shift_limit=0.2, scale_limit=0.2, rotate_limit=30
+            shift_limit=0.12, scale_limit=0.12, rotate_limit=20
         ),
         # A.Blur(blur_limit=2, p=0.05),
         # A.OpticalDistortion(p=0.05),
@@ -31,13 +31,14 @@ def additional_augmenation_good(image, x, y, mode="torch"):
         # A.ChannelShuffle(p=0.05),
         # A.HueSaturationValue(p=0.05),
         # A.ElasticTransform(),
-        A.ToGray(p=p_small),
+        # A.ToGray(p=p_small),
         # A.JpegCompression(p=0.05),
         # A.MedianBlur(p=0.05),
         # A.Cutout(p=0.05),
         # A.RGBShift(p=p_small),
         #A.GaussNoise(var_limit=(0, 50), p=0.05),
         A.Normalize(),
+
     ]
     if mode == "torch":
         compose_list.append(ToTensorV2())
@@ -50,20 +51,20 @@ def additional_augmenation_bad(image, x, y, mode="torch"):
     compose_list = [
         A.Resize(x, y),
         # A.RandomCrop(120, 120),
-        A.Blur(blur_limit=(4, 6), p=p_small),
-        A.RandomBrightness(p=p_small, limit=(-0.5, 0.5)),
-        A.JpegCompression(quality_lower=35, quality_upper=70, p=p_small),
-        A.GaussNoise(var_limit=1000, p=p_small),
+        # A.Blur(blur_limit=(4, 6), p=p_small),
+        # A.RandomBrightness(p=p_small, limit=(-0.5, 0.5)),
+        # A.JpegCompression(quality_lower=35, quality_upper=70, p=p_small),
+        # A.GaussNoise(var_limit=1000, p=p_small),
         # A.RandomSunFlare(p=p_small),
-        A.Downscale(p=p_small),
+        # A.Downscale(p=p_small),
         # A.CLAHE(p=0.05),
         # A.RandomContrast(p=0.05),
         # A.RandomBrightness(p=0.05),
         A.HorizontalFlip(),
-        # A.VerticalFlip(),
+        A.VerticalFlip(),
         # A.RandomRotate90(),
         A.ShiftScaleRotate(
-            shift_limit=0.2, scale_limit=0.2, rotate_limit=30
+            shift_limit=0.12, scale_limit=0.12, rotate_limit=20
         ),
         # A.Blur(blur_limit=2, p=0.05),
         # A.OpticalDistortion(p=0.05),
@@ -71,7 +72,7 @@ def additional_augmenation_bad(image, x, y, mode="torch"):
         # A.ChannelShuffle(p=0.05),
         # A.HueSaturationValue(p=0.05),
         # A.ElasticTransform(),
-        A.ToGray(p=p_small),
+        # A.ToGray(p=p_small),
         # A.JpegCompression(p=0.05),
         # A.MedianBlur(p=0.05),
         # A.Cutout(p=0.05),
@@ -91,7 +92,7 @@ def additional_augmenation_val(image, x, y, mode="torch"):
                     # A.RandomCrop(120, 120),
                     A.Normalize(),
                     # ToTensorV2(),
-                    ]
+                    ]   
     if mode == "torch":
         compose_list.append(ToTensorV2())
     comp = A.Compose(compose_list, p=1)

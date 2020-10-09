@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--depth_trainable",
         type=int,
-        default=1,
+        default=0,
         help="Depth of trainable layers",
     )
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--img_size", type=int, help="Image size")
 
     parser.add_argument(
-        "--gamma", type=float, default=0.5, help="Step reducing?"
+        "--gamma", type=float, default=0.1, help="Step reducing?"
     )
 
     parser.add_argument(
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         type=float,
     )
 
-    parser.add_argument("--epoch", type=int, default=5, help="Image size")
+    parser.add_argument("--epoch", type=int, default=5, help="Epoch number")
 
 
     FLAGS = parser.parse_args()
