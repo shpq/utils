@@ -42,8 +42,6 @@ if __name__ == "__main__":
     if args.quantized:
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.representative_dataset = representative_dataset
-        # converter.inference_input_type = tf.uint8
-        # converter.inference_output_type = tf.uint8
         converter.target_spec.supported_ops = [
             tf.lite.OpsSet.TFLITE_BUILTINS,
             tf.lite.OpsSet.TFLITE_BUILTINS_INT8,
