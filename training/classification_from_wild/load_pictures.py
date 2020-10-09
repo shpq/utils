@@ -87,7 +87,7 @@ def extend_original_pics_storage_parallel(FLAGS, urls, dataset, overwrite=False)
     urls_with_names = dataset[dataset.url.isin(urls)][['url', 'name']]
     urls_with_names = urls_with_names.to_dict(orient='records')
     print(f"urls_with_names len {len(urls_with_names)}")
-    with Pool(100) as p:
+    with Pool(25) as p:
         to_del = list(tqdm(p.imap(_load_and_save, urls_with_names), total=len(urls_with_names)))
     to_del = [x for x in to_del if x]
     change_dataset(FLAGS, to_del)
