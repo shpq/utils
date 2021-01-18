@@ -1,138 +1,52 @@
-import argparse
-import numpy as np
-from train import train_model
-from load_pictures import extend_original_pics_storage
-from utils import read_dataset, TrainConfig, Config, StorageName, create_folder
 import os
+import warnings
+
+from omegaconf import DictConfig
+import hydra
+import shutil
+
+from code_src.train import train_model
+from code_src.load_pictures import extend_original_pics_storage
 
 
-def change_cf(FLAGS):
-    TrainConfig.batch_size = FLAGS.batch_size
-    Config.size_images = (FLAGS.img_size, FLAGS.img_size)
-    TrainConfig.input_shape_raw = (FLAGS.img_size, FLAGS.img_size, 3)
-    StorageName.storage = f"{FLAGS.storage}"
-    FLAGS.storage = f"{FLAGS.storage}"
+def save_code():
+    print(hydra.utils.get_original_cwd())
+    print(os.getcwd())
+    os.makedirs(os.path.join(os.getcwd(), "code_src"), exist_ok=True)
+    code_files_dir = os.path.join(hydra.utils.get_original_cwd(), "code_src")
+    # add all train files / move them to directory
+    for filename in os.listdir(code_files_dir):
+        if ".py" not in filename:
+            continue
+
+        shutil.copy2(
+            os.path.join(code_files_dir, filename),
+            os.path.join(os.getcwd(), "code_src", filename),
+        )
 
 
-def create_folders():
-    for folder in [
-        Config.dataset_path,
-        TrainConfig.checkpoints_folder,
-        StorageName.storage_path,
-        os.path.join(StorageName.storage_path, StorageName.storage, '')
-    ]:
-        print(folder)
-        create_folder(folder)
+warnings.filterwarnings("ignore")
 
 
-def main(FLAGS):
-    change_cf(FLAGS)
-    dataset = read_dataset(FLAGS.csv)
-    print("download new images")
-    dataset = dataset.drop_duplicates(subset=['url'])
-    create_folders()
-    extend_original_pics_storage(FLAGS, dataset)
-    train_model(FLAGS)
+def os_based_path(path):
+    if path:
+        return os.path.join(hydra.utils.get_original_cwd(), os.path.join(*path.split("/")))
+    return ""
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
-
-    parser.add_argument("--storage", type=str, help="Pics storage name")
-
-    parser.add_argument("--csv", type=str, help="Name of csv in csv folder")
-
-    parser.add_argument(
-        "--cached",
-        default=False,
-        help="Use cached split?",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "--schedule",
-        default=False,
-        help="Use lr schedule?",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "--pretrained",
-        type=str,
-        default="xception",
-        help="Which pretrained model do you wanna use?",
-    )
-
-    parser.add_argument(
-        "--depth_trainable",
-        type=int,
-        default=0,
-        help="Depth of trainable layers",
-    )
-
-    parser.add_argument(
-        "--epoch_reduce",
-        type=int,
-        default=5,
-        help="After what epoch we need to reduce lr?",
-    )
-
-    parser.add_argument("--lr", type=float, help="Learning rate")
-
-    parser.add_argument(
-        "--batch_size", type=int, default=-1, help="Size of the batch"
-    )
-
-    parser.add_argument("--img_size", type=int, help="Image size")
-
-    parser.add_argument(
-        "--gamma", type=float, default=0.1, help="Step reducing?"
-    )
-
-    parser.add_argument(
-        "--saved", type=str, default="-", help="Saved model?"
-    )
-
-    parser.add_argument(
-        "--quantize",
-        default=False,
-        help="Quantize model?",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "--qconfig",
-        default=None,
-        help="fbgemm or qnnpack qconfig for quantization",
-    )
-
-    parser.add_argument(
-        "--dropout",
-        default=0,
-        help="Dropout rate to put before last layer",
-    )
-
-    parser.add_argument(
-        "--src",
-        default="timm",
-        help="Source where we can get this model",
-    )
-
-    parser.add_argument(
-        "--framework",
-        default="torch",
-        help="Which framework do you want to use for training",
-    )
-
-    parser.add_argument(
-        "--strong_aug",
-        default=None,
-        help="Use strong augs for migration?",
-        type=float,
-    )
-
-    parser.add_argument("--epoch", type=int, default=5, help="Epoch number")
+@hydra.main(config_path='conf', config_name='config')
+def run(cfg: DictConfig) -> None:
+    print(cfg.pretty())
+    if cfg.general.save_code:
+        save_code()
+    cfg.dataset.path = os_based_path(cfg.dataset.path)
+    cfg.dataset.csv_path = os_based_path(cfg.dataset.csv_path)
+    cfg.dataset.csvs_path = os_based_path(cfg.dataset.csvs_path)
+    cfg.dataset.csv_path_back = os_based_path(cfg.dataset.csv_path_back)
+    cfg.model.pretrained_path = os_based_path(cfg.model.pretrained_path)
+    extend_original_pics_storage(cfg)
+    train_model(cfg)
 
 
-    FLAGS = parser.parse_args()
-    main(FLAGS)
+if __name__ == '__main__':
+    run()
