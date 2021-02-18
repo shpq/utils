@@ -1,0 +1,41 @@
+training:
+  size: [600, 600]
+  epochs: 100
+  batch_size: 4
+  lr: 1e-3
+  lr_beauty: 1e-3
+  epoch_stop: 7
+  epoch_reduce: 3
+  checkpoints_path: model_checkpoints
+  Lambda: 1.0
+  label_smooth: 0.02
+  checkpoint_every: 100
+  shuffle: true
+dataset:
+  storage_path: storages
+  name: beauty
+  train_path: ${dataset.storage_path}/${dataset.name}_train
+  test_path: ${dataset.storage_path}/${dataset.name}_test
+  ugly_pics: ${dataset.storage_path}/ugly_cropped
+  beauty_pics: ${dataset.storage_path}/beauty_cropped
+model:
+  pretrained_path: null
+  name: EncoderDecoder
+  beauty:
+    path: additional/04-loss-0.16.h5
+  ResModel:
+    frn: false
+    N: 5
+    d: 32
+    reduction: 4
+  EncoderDecoder:
+    frn: true
+    a: 0.5
+    b: 0.75
+    reduction: 4
+hydra:
+  run:
+    dir: outputs/${dataset.name}/${model.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: outputs/${dataset.name}/${model.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}-multirun
+    subdir: ${hydra.job.num}

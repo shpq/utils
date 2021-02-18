@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore")
 
 def os_based_path(path):
     if path:
-        return os.path.join(hydra.utils.get_original_cwd(), os.path.join(*path.split("/")))
+        return os.path.join(hydra.utils.get_original_cwd(), os.path.join(*path.replace("\\", "/").split("/")))
     return ""
 
 

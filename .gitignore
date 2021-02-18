@@ -10,4 +10,5 @@ __pycache__
 *.jpg
 *.pk
 *.pth
+outputs
 .ipynb_checkpoints
