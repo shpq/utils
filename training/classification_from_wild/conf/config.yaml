@@ -1,0 +1,42 @@
+general:
+  framework: torch
+  save_code: true
+  custom: null
+model:
+  src: timm
+  name: mobilenetv2_140
+  dropout: 0.3
+  quantize: false
+  qat_qconfig: fbgemm
+  hub_repo: pytorch/vision:v0.6.0
+  pretrained_path: null
+  mobilenet_v2:
+    alpha: 1
+dataset:
+  csvs_path: csvs
+  cached: true
+  csv_name: beauty
+  csv_path: ${dataset.csvs_path}/${dataset.csv_name}.csv
+  csv_path_back: ${dataset.csvs_path}/${dataset.csv_name}_backup.csv
+  imgs_path: storages
+  storage_name: beauty
+  path: ${dataset.imgs_path}/${dataset.storage_name}
+training:
+  mode: classification
+  epochs: 10
+  train_size: 0.9
+  checkpoints_path: model_checkpoints
+  batch_size: 32
+  img_size: [224, 224]
+  strong_aug: false
+  depth_trainable: 0
+  lr: 1e-3
+  gamma: 0.1
+  epoch_reduce: 3
+  epoch_stop: 6
+hydra:
+  run:
+    dir: outputs/${dataset.csv_name}/${general.framework}/${model.name}_${model.src}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: outputs/${dataset.csv_name}/${general.framework}/${model.name}_${model.src}/${now:%Y-%m-%d}/${now:%H-%M-%S}-multirun
+    subdir: ${hydra.job.num}
